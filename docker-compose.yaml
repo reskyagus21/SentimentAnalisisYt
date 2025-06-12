@@ -1,0 +1,55 @@
+version : '3.8'
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    container_name: 'youtube_app'
+    command: gunicorn --bind 0.0.0.0:8000 Youtube.wsgi:application
+    volumes:
+      - .:/app
+      - media:/app/media
+    environment:
+      - DJANGO_SETTINGS_MODULE=Youtube.settings
+      - MYSQL_HOST=db
+      - MYSQL_DATABASE=sentimentanalisis
+      - MYSQL_USER=root
+      - MYSQL_PASSWORD=12345
+      - MYSQL_PORT=3306
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - app-network
+
+  db:
+    image: mysql:8.0
+    container_name: 'youtube_db'
+    volumes:
+      - mysql_data:/var/lib/mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=12345
+      - MYSQL_DATABASE=sentimentanalisis 
+    ports:
+      - "3000:3036"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h","localhost"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 10s
+    networks:
+      - app-network
+
+volumes:
+  media:
+  mysql_data:
+
+networks:
+  app-network:
+    driver: bridge
+
+

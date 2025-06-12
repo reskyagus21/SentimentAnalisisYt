@@ -1,0 +1,54 @@
+name: Django CI/CD
+
+on:
+  push:
+    branchs:
+      - main
+  pull_request:
+    branchs:
+      - main
+
+jobs:
+  build-and-test:
+    name: test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    
+    steps:
+      - name: Check Repository
+        uses: actions/checkout@v3
+      
+      - name: set up docker
+        uses: docker/setup-buildx-actions@v3
+
+      - name: build docker container
+        uses: docker-compose -f docker-compose.yaml build
+      
+      - name: jalankan docker
+        uses: docker-compose run --rm web python3 manage.py test
+    
+  deploy:
+    name: deploy ke Main
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+    - name: Check Repository
+      uses: actions/checkout@v3
+    
+    - name: set up docker
+      uses: docker/setup-buildx-action@v3
+
+    - name: deploy via ssh
+      uses: appleboy/ssh-action@v1.0.0
+      with:
+        host: ${{secrets.SERVER_IP}} #IP Server
+        username: ${{secrets.SERVER_USER}} 
+        key: ${{ secrets.SERVER_SSH_KEY }} #Biasanya disediakan di github agar dapat terhubung ke server kamu
+        script: |
+          cd /home/ubuntu/projectYt
+          git pull origin main
+          docker-compose down
+          docker-compose up -d --build
+
+
